@@ -23,7 +23,7 @@ jobs:
       - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake python3 git build-essential zlib1g-dev
+          sudo apt-get install -y ninja-build cmake python3 git build-essential zlib1g-dev lld
 
       - name: Checkout Arkari (llvm-18.x)
         uses: actions/checkout@v4
@@ -44,6 +44,8 @@ jobs:
             -DLLVM_INCLUDE_BENCHMARKS=OFF \
             -DLLVM_INCLUDE_DOCS=OFF \
             -DLLVM_ENABLE_ZLIB=ON \
+            -DLLVM_USE_LINKER=lld \
+            -DLLVM_BUILD_TOOLS=OFF \
             -DLLVM_PARALLEL_LINK_JOBS=1 \
             -DCMAKE_INSTALL_PREFIX=/tmp/arkari18
 
