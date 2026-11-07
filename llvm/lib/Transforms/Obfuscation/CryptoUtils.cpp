@@ -6,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#include <fstream>
 //
 // This file implements an AES-CTR-based cryptographically secure
 // pseudo-random generator.
