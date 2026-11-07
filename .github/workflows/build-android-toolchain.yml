@@ -1,0 +1,68 @@
+name: Build Arkari Android Toolchain (clang18 AArch64)
+
+# Builda o Arkari (branch llvm-18.x) como toolchain Linux x64 com os targets
+# AArch64+X86 -> clang 18 (casa com o NDK 28) + obfuscacao do Arkari.
+# Sobe o resultado como artifact (arkari18-android-linux-x64.tar.xz).
+# Rodar: aba Actions -> este workflow -> "Run workflow" (na branch llvm-18.x).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 350
+    steps:
+      - name: Free disk space (~30GB)
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+                      /usr/local/share/boost /opt/hostedtoolcache /usr/local/.ghcup || true
+          sudo apt-get clean
+          df -h /
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build cmake python3 git build-essential zlib1g-dev
+
+      - name: Checkout Arkari (llvm-18.x)
+        uses: actions/checkout@v4
+        with:
+          ref: llvm-18.x
+          fetch-depth: 1
+
+      - name: Configure (clang + lld, AArch64 + X86, Release)
+        run: |
+          cmake -S llvm -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_ENABLE_PROJECTS="clang;lld" \
+            -DLLVM_TARGETS_TO_BUILD="AArch64;X86" \
+            -DLLVM_ENABLE_ASSERTIONS=OFF \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DCLANG_INCLUDE_TESTS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_DOCS=OFF \
+            -DLLVM_ENABLE_ZLIB=ON \
+            -DLLVM_PARALLEL_LINK_JOBS=1 \
+            -DCMAKE_INSTALL_PREFIX=/tmp/arkari18
+
+      - name: Build + install
+        run: |
+          ninja -C build install
+          df -h /
+
+      - name: Package
+        run: |
+          cd /tmp
+          tar -cJf arkari18-android-linux-x64.tar.xz arkari18
+          ls -la arkari18-android-linux-x64.tar.xz
+          /tmp/arkari18/bin/clang --version | head -2
+          /tmp/arkari18/bin/clang --print-targets | grep -i aarch64 || echo "WARN sem aarch64"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: arkari18-android-linux-x64
+          path: /tmp/arkari18-android-linux-x64.tar.xz
+          retention-days: 14
